@@ -1,0 +1,168 @@
+<aura:component controller="XC_PaypalSettingController" implements="force:appHostable,flexipage:availableForAllPageTypes" access="global">
+
+    <aura:attribute name="developerNameValue" type="String"/>
+    <aura:attribute name="envSelectedValue" type="String"/>
+    <aura:attribute name="envTypeSelectedValue" type="String"/>
+    <aura:attribute name="storeFrontValue" type="String"/>
+    <aura:attribute name="environmentValue" type="String"/>
+    <aura:attribute name="masterLabelValue" type="String"/>
+    <aura:attribute name="privateKeyValue" type="String"/>
+    <aura:attribute name="endpointValue" type="String"/>
+    <aura:attribute name="merchantAccountIdValue" type="String"/>
+    <aura:attribute name="merchantIdValue" type="String"/>
+    <aura:attribute name="publicKeyValue" type="String"/>
+    <aura:attribute name="userNameValue" type="String"/>
+    <aura:attribute name="passWordValue" type="String"/>
+    <aura:attribute name="tokenizationKeyValue" type="String"/>
+    <aura:attribute name="x3DSecureValue" type="String"/>
+    <aura:attribute name="paymentModelValue" type="String"/>
+    <aura:attribute name="paymentModelIntentValue" type="String"/>
+    <aura:attribute name="paypalExpressButtonValue" type="String"/>
+    <aura:attribute name="billingAgreementDescriptionValue" type="String"/>
+    <aura:attribute name="descriptorPhoneValue" type="String"/>
+    <aura:attribute name="descriptorURLValue" type="String"/>
+    <aura:attribute name="descriptorNameValue" type="String"/>
+    <aura:attribute name="merchantNameValue" type="String"/>
+    <aura:attribute name="paypal" type="XC_PaypalSettingController"/>
+    <aura:attribute name="spinner" type="boolean" default="FALSE"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <!--<aura:handler event="aura:waiting" action="{!c.showSpinner}"/>-->
+    <aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/>
+
+    <aura:if isTrue="{!v.spinner}">
+        <div aura:id="spinnerId" class="slds-spinner_container">
+            <div class="slds-spinner--brand  slds-spinner slds-spinner--large slds-is-relative" role="alert">
+                <span class="slds-assistive-text">Loading...</span>
+                <div class="slds-spinner__dot-a"></div>
+                <div class="slds-spinner__dot-b"></div>
+            </div>
+        </div>
+    </aura:if>
+
+    <lightning:card class="slds-p-around_x-large">
+        <aura:set attribute="title">
+            <p class="slds-text-title_bold slds-text-color_success ">Braintree</p>
+        </aura:set>
+        <aura:set attribute="actions">
+            <lightning:select name="envSelect" label="Settings" value="{!v.envSelectedValue}" onchange="{!c.evnOnChange}">
+                <option value="new">&lt;&lt;Create New&gt;&gt;</option>
+                <aura:iteration items="{!v.paypal.currPaypalSettingList}" var="opt">
+                    <option value="{!opt.DeveloperName}">{!opt.XC_Storefront__c}&nbsp;{!opt.XC_Environment__c}</option>
+                </aura:iteration>
+            </lightning:select>
+        </aura:set>
+
+        <aura:set attribute="footer">
+            <lightning:button aura:id="createId" variant="brand" label="Create" title="Create" onclick="{!c.insertUpdateClick}"/>
+            <lightning:button aura:id="updateId" variant="brand" label="Update" title="Update" onclick="{!c.insertUpdateClick}" />
+            <lightning:button aura:id="removeId" variant="brand" label="Remove" title="Remove" onclick="{!c.deleteClick}"/>
+        </aura:set>
+
+
+        <div class="slds-grid slds-wrap slds-gutters">
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:input required="true" aura:id="storeFrontId" type="text" name="storeFront" label="Storefront" value="{!v.storeFrontValue}" />
+            </div>
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:select name="environment" label="Environment" aura:id="envTypeId" value="{!v.environmentValue}">
+                    <aura:iteration items="{!v.paypal.environmentTypeList}" var="opt">
+                        <option value="{!opt}">{!opt}</option>
+                    </aura:iteration>
+                </lightning:select>
+
+            </div>
+
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:input required="true" aura:id="userNameId" type="text" name="userNameId" label="Username" value="{!v.userNameValue}" />
+            </div>
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:input required="true" aura:id="passWordId" type="password" name="passWordId" label="Password" value="{!v.passWordValue}" />
+            </div>
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:input required="true" aura:id="endpointId" type="text" name="endpoint" label="Endpoint URL" value="{!v.endpointValue}" />
+            </div>
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:input required="true" aura:id="merchantId" type="password" name="merchantId" label="Merchant Id" value="{!v.merchantIdValue}" />
+            </div>
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:input required="true" aura:id="publicKeyId" type="password" name="publicKeyId" label="Public Key" value="{!v.publicKeyValue}" />
+            </div>
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:input required="true" aura:id="privateKeyId" type="password" name="privateKeyId" label="Private Key" value="{!v.privateKeyValue}" />
+            </div>
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:input required="true" aura:id="tokenizationKeyId" type="password" name="tokenizationKeyId" label="Tokenization Key" value="{!v.tokenizationKeyValue}" />
+            </div>
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:select name="x3DSecure" label="3DSecure" aura:id="x3DSecureId" value="{!v.x3DSecureValue}">
+                    <aura:iteration items="{!v.paypal.x3DSecureList}" var="opt">
+                        <option value="{!opt}">{!opt}</option>
+                    </aura:iteration>
+                </lightning:select>
+
+            </div>
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:input required="true" aura:id="merchantNameId" type="text" name="merchantNameId" label="Merchant Name" value="{!v.merchantNameValue}" />
+            </div>
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:input aura:id="merchantAccountId" type="text" name="merchantAccountId" label="Merchant Account Id" value="{!v.merchantAccountIdValue}" />
+            </div>
+
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:select name="paymentModelIntentId" label="Payment Model(Intent)" aura:id="paymentModelIntentId" value="{!v.paymentModelIntentValue}">
+                    <aura:iteration items="{!v.paypal.paymentModelIntentList}" var="opt">
+                        <option value="{!opt}">{!opt}</option>
+                    </aura:iteration>
+                </lightning:select>
+
+            </div>
+
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:select name="paymentModelId" label="Payment Model" aura:id="paymentModelId" value="{!v.paymentModelValue}">
+                    <aura:iteration items="{!v.paypal.paymentModelList}" var="opt">
+                        <option value="{!opt}">{!opt}</option>
+                    </aura:iteration>
+                </lightning:select>
+
+            </div>
+
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:select name="paypalExpressButtonId" label="Visibility of PayPal Express Checkout Button on the Cart page" aura:id="paypalExpressButtonId" value="{!v.paypalExpressButtonValue}">
+                    <aura:iteration items="{!v.paypal.paypalButtonDisplayList}" var="opt">
+                        <option value="{!opt}">{!opt}</option>
+                    </aura:iteration>
+                </lightning:select>
+
+            </div>
+
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:input required="true" aura:id="billingAgreementDescriptionId" type="text" name="billingAgreementDescriptionId" label="Billing Agreement Description" value="{!v.billingAgreementDescriptionValue}" />
+            </div>
+
+            <div class="slds-col slds-size_1-of-2">
+                <lightning:input required="true" aura:id="descriptorNameId" type="text" name="descriptorNameId" label="Descriptor Name" value="{!v.descriptorNameValue}" />
+            </div>
+
+            <div class="slds-col slds-size_1-of-2">
+                <label class="slds-form-element__label" for="text-input-id-1">
+                    <abbr class="slds-required" title="required">*</abbr>
+                    Descriptor Phone
+                </label>
+                <lightning:helptext content="Phone must contain exactly 10 digits, and can only contain numbers, dashes, parentheses and periods." />
+                <lightning:input  required="true" class="xc_hidelabel" aura:id="descriptorPhoneId" type="text" name="descriptorPhoneId" label="Descriptor Phone" value="{!v.descriptorPhoneValue}" />
+            </div>
+
+            <div class="slds-col slds-size_1-of-2">
+                <label class="slds-form-element__label" for="text-input-id-1">
+                    <abbr class="slds-required" title="required">*</abbr>
+                    Descriptor URL
+                </label>
+                <lightning:helptext content="URL must be 13 characters or shorter and can only contain letters, numbers and periods" />
+                <lightning:input  maxlength="13" required="true" class="xc_hidelabel" aura:id="descriptorURLId" label="Descriptor URL" type="text" name="descriptorURLId" value="{!v.descriptorURLValue}" />
+
+            </div>
+
+
+        </div>
+    </lightning:card>
+</aura:component>
