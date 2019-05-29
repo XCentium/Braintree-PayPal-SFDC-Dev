@@ -1,0 +1,296 @@
+<apex:page docType="html-5.0" sidebar="false" showHeader="false" standardStylesheets="false" applyHtmlTag="false" controller="XC_Payment_Controller">
+
+    <style type="text/css">
+        #card-number {
+            height:40px;
+            width:200px;
+            margin-bottom: 10px;
+        }
+        #cvv {
+            height:40px;
+            width:200px;
+            margin-bottom: 10px;
+        }
+        #expiration-date {
+            height:40px;
+            width:200px;
+            margin-bottom: 10px;
+        }
+    </style>
+
+    <script id="PaymentPP-Both" type="text/template">
+        <div class="ccPaymentOuterContainer">
+            <!---<h2 class="title">CC{{pageLabelMap 'MyWallet_AddPymtMtd'}}</h2>---->
+            <div class="main_content_large_right_container">
+                <div id="paypal-button"></div><br /><br />
+                <div class="alert alert-error ccPayment-messagingSection-Error" style="display: none"></div>
+
+                <form action="/" id="my-sample-form" method="post">
+                    <label for="card-number">Card Number</label>
+                    <div id="card-number"></div>
+
+                    <label for="cvv">CVV</label>
+                    <div id="cvv"></div>
+
+                    <label for="expiration-date">Expiration Date</label>
+                    <div id="expiration-date"></div>
+
+                    <input type="submit" value="Pay" disabled />
+                </form>
+            </div>
+        </div>
+
+    </script>
+
+
+    <script>
+        jQuery(function($) {
+            function findPos(obj) {
+                var curtop = 0;
+                if (obj.offsetParent) {
+                    do {
+                        curtop += obj.offsetTop;
+                    } while (obj = obj.offsetParent);
+                    return [curtop];
+                }
+            }
+
+            jQuery.loadScript = function (url, callback) {
+                jQuery.ajax({
+                    url: url,
+                    dataType: 'script',
+                    success: callback,
+                    async: true
+                });
+            }
+
+            CCRZ.pubSub.on('view:PaymentsPPView:refresh', function(theView) {
+
+
+            });
+
+            CCRZ.models.PaymentsPPModel = CCRZ.CloudCrazeModel.extend();
+
+            CCRZ.views.PaymentsPPView = CCRZ.CloudCrazeView.extend({
+                viewName : "PaymentsPPView",
+                managedSubView : true,
+                templateDesktop : CCRZ.util.template("PaymentPP-Both"),
+                templatePhone : CCRZ.util.template("PaymentPP-Both"),
+                init : function(options){
+                    this.selector = options.selector;
+
+                    //$.loadScript('https://js.braintreegateway.com/web/3.44.2/js/client.min.js');
+                    //$.loadScript('https://js.braintreegateway.com/web/3.44.2/js/hosted-fields.min.js');
+
+                    this.render();
+
+                    var form = document.querySelector('#my-sample-form');
+                    var submit = document.querySelector('input[type="submit"]');
+
+                    braintree.client.create({
+                        authorization: 'sandbox_gp5w49pt_ttnv5yg2vw2hr8c4'
+                    }, function (clientErr, clientInstance) {
+                        if (clientErr) {
+                            console.error(clientErr);
+                            return;
+                        }
+
+                        // This example shows Hosted Fields, but you can also use this
+                        // client instance to create additional components here, such as
+                        // PayPal or Data Collector.
+
+                        // Create a PayPal Checkout component.
+                        braintree.paypalCheckout.create({
+                            client: clientInstance
+                        }, function (paypalCheckoutErr, paypalCheckoutInstance) {
+
+                            // Stop if there was a problem creating PayPal Checkout.
+                            // This could happen if there was a network error or if it's incorrectly
+                            // configured.
+                            if (paypalCheckoutErr) {
+                                console.error('Error creating PayPal Checkout:', paypalCheckoutErr);
+                                return;
+                            }
+
+                            // Set up PayPal with the checkout.js library
+                            paypal.Button.render({
+                                env: 'sandbox',
+
+                                payment: function () {
+                                    return paypalCheckoutInstance.createPayment({
+                                        // Your PayPal options here. For available options, see
+                                        // http://braintree.github.io/braintree-web/current/PayPalCheckout.html#createPayment
+                                        flow: 'checkout',
+                                        amount: '1.00',
+                                        currency: 'USD',
+                                        //intent: 'capture' // this value must either be `capture` or match the intent passed into the PayPal SDK intent query parameter
+                                        enableShippingAddress: true,
+                                        shippingAddressEditable: false,
+                                        shippingAddressOverride: {
+                                            recipientName: 'Scruff McGruff',
+                                            line1: '1234 Main St.',
+                                            line2: 'Unit 1',
+                                            city: 'Chicago',
+                                            countryCode: 'US',
+                                            postalCode: '60652',
+                                            state: 'IL',
+                                            phone: '123.456.7890'
+                                        }
+                                    });
+                                },
+
+                                onAuthorize: function (data, actions) {
+                                    return paypalCheckoutInstance.tokenizePayment(data, function (err, payload) {
+                                        // Submit `payload.nonce` to your server.
+                                        //XC-> call remote action to send for Auth and pass cart ID
+
+                                        var remoteCall = _.extend(CCRZ.RemoteInvocation,{className:'XC_Payment_Controller'});
+                                        remoteCall.invokeCtx('postPaypal', payload.nonce, 'sale', CCRZ.cartCheckoutModel.attributes.totalAmount, function(res){
+                                            console.log('postPaypal');
+                                            console.log('resp.data => ' + res.data['txObject']);
+                                            if(res.success){
+                                                CCRZ.pubSub.trigger('action:processPayment', res.data['txObject']);
+                                            }
+                                        }, { buffer : false, escape : false , nmsp:false });
+                                    });
+                                },
+
+                                onCancel: function (data) {
+                                    console.log('checkout.js payment cancelled', JSON.stringify(data, 0, 2));
+                                },
+
+                                onError: function (err) {
+                                    console.error('checkout.js error', err);
+                                }
+                            }, '#paypal-button').then(function () {
+                                // The PayPal button will be rendered in an html element with the id
+                                // `paypal-button`. This function will be called when the PayPal button
+                                // is set up and ready to be used.
+                            });
+
+                        });
+
+                        braintree.hostedFields.create({
+                            client: clientInstance,
+                            styles: {
+                                'input': {
+                                    'font-size': '14px',
+                                    'height':'65%',
+                                    'width':'60%'
+                                },
+                                'input.invalid': {
+                                    'color': 'red'
+                                },
+                                'input.valid': {
+                                    'color': 'blue',
+                                    'line-height':'4px'
+                                }
+                            },
+                            fields: {
+                                number: {
+                                    selector: '#card-number',
+                                    placeholder: ''
+                                },
+                                cvv: {
+                                    selector: '#cvv',
+                                    placeholder: ''
+                                },
+                                expirationDate: {
+                                    selector: '#expiration-date',
+                                    placeholder: '10/2019'
+                                }
+                            }
+                        }, function (hostedFieldsErr, hostedFieldsInstance) {
+                            if (hostedFieldsErr) {
+                                console.error(hostedFieldsErr);
+                                return;
+                            }
+
+                            submit.removeAttribute('disabled');
+
+                            form.addEventListener('submit', function (event) {
+                                event.preventDefault();
+
+                                hostedFieldsInstance.tokenize(function (tokenizeErr, payload) {
+                                    if (tokenizeErr) {
+                                        console.error(tokenizeErr);
+                                        return;
+                                    }
+
+                                    // If this was a real integration, this is where you would
+                                    // send the nonce to your server.
+                                    console.log('Got a nonce: ' + payload.nonce);
+                                    //XC-> call remote action to send for Auth and pass cart ID
+
+                                    var remoteCall = _.extend(CCRZ.RemoteInvocation,{className:'XC_Payment_Controller'});
+                                    remoteCall.invokeCtx('postPaypal', payload.nonce, 'sale', CCRZ.cartCheckoutModel.attributes.totalAmount, function(res){
+                                        console.log('postPaypal');
+                                        console.log('resp.data => ' + res.data['txObject']);
+                                        if(res.success){
+                                            CCRZ.pubSub.trigger('action:processPayment', res.data['txObject']);
+                                        }
+                                    }, { buffer : false, escape : false , nmsp:false });
+                                });
+                            }, false);
+                        });
+                    });
+                    CCRZ.pubSub.trigger('action:paymentViewInit',this);
+                },
+                events: {
+                    "click .makeCCPayment" : "makeCCPayment"
+                },
+                validateInfo: function(formName, fieldData) {
+                    $("#"+formName).validate({
+                        invalidHandler: function(event, validator) {
+                            CCRZ.handleValidationErrors(event, validator, 'ccPayment-messagingSection-Error', false);
+                        },
+                        rules: {
+                            accountNumber : { required: true, minlength: 15, maxlength: 16 },
+                            CVV : { required: true, minlength: 3, maxlength: 4 }
+                        },
+                        messages: {
+                            accountNumber : { required : 'Card number is required', minlength: 'Card number is not valid', maxlength: 'Card number is not valid' },
+                            CVV : { required: 'CVV is required', minlength: 'CVV is not valid', maxlength: 'CVV is not valid' }
+                        },
+                        errorPlacement: function(error, element) {
+                        }
+                    });
+                    return $("#"+formName).valid();
+                },
+
+                parentPreRender : function(){
+                    //Look for the instantiated iframe
+                    //Detach it from the DOM
+                    //Re-render the view but don't create the iframe
+                    //Re-attach the iframe as appropriate in the rendered view
+                },
+                renderDesktop : function(){
+                    this.setElement(this.selector);
+                    this.data={};
+                    this.$el.html(this.templateDesktop(this.data));
+                },
+                renderPhone : function(){
+                    this.setElement(this.selector);
+                    this.data={};
+                    this.$el.html(this.templatePhone(this.data));
+                },
+                makeCCPayment : function(event){
+                    $('.deskLayout, .phoneLayout').append('<div id="overlay"><div class="circleContainer"><div class="circle"></div><div class="circle1"></div></div></div>');
+
+                },
+
+            });
+
+            CCRZ.pubSub.trigger('action:paymentViewReady','pp',function(options){
+                CCRZ.payment = CCRZ.payment||{views:{}};
+                CCRZ.payment.views.pp = new CCRZ.views.PaymentsPPView({
+                    model : new CCRZ.models.PaymentsPPModel(),
+                    selector : options.selector
+                });
+            });
+        });
+
+
+    </script>
+
+</apex:page>

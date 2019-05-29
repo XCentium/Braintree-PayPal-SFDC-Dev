@@ -1,0 +1,13 @@
+.THIS .slds-text-title_bold {
+    font-size: 1.85rem;
+    font-weight: bold;
+
+}
+.THIS .slds-spinner_container {
+    z-index: 10000;
+    position: fixed;
+}
+
+.THIS .xc_hidelabel label{
+    display:none;
+}

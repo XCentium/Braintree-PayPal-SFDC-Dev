@@ -1,0 +1,46 @@
+
+<aura:component controller="XC_PaypalTransactionController" description="XC_PaypalTransaction" implements="flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction" access="global">
+    <aura:attribute name="recordId" type="Id"/>
+    <aura:attribute name="ccTransaction" type="ccrz__E_TransactionPayment__c"/>
+    <aura:handler name="init" value="{!this}" action="{!c.myAction}"/>
+    <force:recordData aura:id="OrderRecord"
+                      recordId="{!v.recordId}"
+                      targetFields="{!v.ccrz__E_Order__c}"
+                      layoutType="FULL"
+    />
+
+
+
+    <lightning:card class="slds-p-around_x-large">
+        <aura:set attribute="title">
+            <p class="slds-text-title_bold slds-text-color_success ">Paypal Transaction</p>
+        </aura:set>
+
+
+        <aura:set attribute="footer">
+            <lightning:button aura:id="voidId" variant="brand" label="Void" title="Void" onclick="{!c.voidTransaction}"/>
+            <lightning:button aura:id="chargeId" variant="brand" label="Charge" title="Charge" onclick="{!c.chargeTransaction}" />
+            <lightning:button aura:id="refundId" variant="brand" label="Refund" title="Refund" onclick="{!c.refundTransaction}" />
+            <!--<lightning:button aura:id="chargeId" variant="brand" label="Charge" title="Charge" onclick="{!c.insertUpdateClick}" />-->
+        </aura:set>
+
+        <div class="slds-col slds-size_1-of-2">
+            <lightning:input aura:id="paymentTypeId" type="text" name="paymentTypeId" label="Payment Type" value="{!v.ccTransaction.ccrz__PaymentType__c}"  readonly="true" />
+        </div>
+
+        <div class="slds-col slds-size_1-of-2">
+            <lightning:input aura:id="accountNumId" type="text" name="accountNumId" label="Card Last 4 Digits" value="{!v.ccTransaction.ccrz__AccountNumber__c}" readonly="true" />
+        </div>
+
+        <div class="slds-col slds-size_1-of-2">
+            <lightning:input aura:id="expiredMonthId" type="text" name="expiredMonthId" label="Expiration Month" value="{!v.ccTransaction.ccrz__ExpirationMonth__c}" readonly="true" />
+        </div>
+
+        <div class="slds-col slds-size_1-of-2">
+            <lightning:input aura:id="expiredYearId" type="text" name="expiredYearId" label="Expiration Year" value="{!v.ccTransaction.ccrz__ExpirationYear__c}" readonly="true" />
+        </div>
+        <div class="slds-col slds-size_1-of-2">
+            Enter Amount for Partial Refund: <lightning:input aura:id="amountId" type="number" name="amountId" label="Amount" formatter="currency" />
+        </div>
+    </lightning:card>
+</aura:component>

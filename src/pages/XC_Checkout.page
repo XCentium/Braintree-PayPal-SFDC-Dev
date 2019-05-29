@@ -1,0 +1,173 @@
+
+<apex:page id="XC_Checkout" docType="html-5.0" sidebar="false" showHeader="false" standardStylesheets="false" applyHtmlTag="false">
+    <script>
+        CCRZ.pubSub.on('view:cartCheckoutView:awaitingSubViewInit',function(theView){
+            if(CCRZ.Checkout.payment){
+                CCRZ.Checkout.payment.register(theView);
+            }
+            CCRZ.pubSub.trigger('view:cartCheckoutView:subViewInit');
+        });
+    </script>
+
+    <script id="XC_Payment" type="text/template">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+
+                <div class="panel panel-default cc_panel cc_checkout_payment_panel">
+                    <div class="panel-body cc_body">
+                        <input class="button processBack btn btn-default btn-sm hide" type="button" value="{{pageLabelMap 'Back'}}" alt="{{pageLabelMap 'Back'}}" />
+                        <div class="checkoutContainer checkoutPaymentContainer cc_checkout_payment_container">
+                            <div class="messagingSection-Error" style="display: none"></div>
+                            <div class="messagingSection-Info" style="display: none"></div>
+                            <div class="messagingSection-Warning" style="display: none"></div>
+                            <div class="checkoutPaymentTarget"/>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </script>
+    <script>
+        jQuery(function($){
+            CCRZ.uiProperties.PaymentView.desktop.tmpl = 'XC_Payment';
+            CCRZ.uiProperties.PaymentView.phone.tmpl = 'XC_Payment';
+        });
+    </script>
+
+
+    <script id="PaymentProcessor-Desktop" type="text/template">
+        <div class="panel cc_panel cc_payment_processor">
+            <div class="">
+                <div class="storedpayment-messagingSection-Error" role="alert" style="display: none"></div>
+                <div class="storedpayment-messagingSection-Warning" role="alert" style="display: none"></div>
+                <div class="storedpayment-messagingSection-Info" role="alert" style="display: none">
+                    <button type="button" class="close cc_close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&#215;</span></button>
+                </div>
+
+                {{#if true }}
+
+                {{#ifDisplay 'WLT.Enabled'}}
+
+                {{#if this.storedPayments}}
+
+                <div class="panel panel-default cc_panel cc_payment_processor_mywallet">
+                    <div class="panel-heading cc_heading">
+                        <h3 class="panel-title cc_title">{{pageLabelMap 'PaymentProcessor_MyWallet'}}</h3>
+                    </div>
+                    <div class="panel-body cc_body">
+                        <div class="cc_stored_payments_container">
+                            <div class="cc_top_section">{{pageLabelMap 'PaymentProcessor_Top'}}</div>
+                            {{#each this.storedPayments}}
+                            <div class="cc_stored_payments_container {{this.accountType}}">
+                                <div class="radio">
+                                    <label for="storedPaymentSelection{{this.sfid}}" class="cc_stored_payments_selector {{this.sfid}}">
+                                        <input id="storedPaymentSelection{{this.sfid}}" type="radio" name="storedPaymentSelection" value="{{this.sfid}}" class="storedPaymentSelection {{this.sfid}}" data-id="{{this.sfid}}" {{#ifEquals @root.storedSelected this.sfid}}checked{{/ifEquals}}/></span>
+                                    </label>
+                                    <span class="cc_stored_payment_display">
+              {{#ifEquals this.paymentType "paypal"}}PayPal: {{else}}Card: {{/ifEquals}}/>{{pageLabelMapMultiString 'PaymentDisplay_' this.accountType this.accountType this.accountNumber this.subAccountNumber (pageLabelMapMultiString 'PaymentType_' this.paymentType) (pageLabelMapMultiString 'PaymentExpMonth_' this.expirationMonth) (pageLabelMap this.expirationYear) this.displayName}}
+             </span>
+                                </div>
+                            </div>
+                            {{/each}}
+                            <div class="cc_payment_action_container">
+                                <p class="panel-body pull-right cc_action_buttons">
+                                    <button type="button" class="btn btn-default btn-sm useStoredPayment1 cc_use_stored_payment">{{pageLabelMap 'PaymentProcessor_UseStoredPayment'}}</button>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {{/if}}
+                {{/ifDisplay}}
+                {{/if}}
+            </div>
+            <div class="paymentMidSection">{{pageLabelMap 'PaymentProcessor_MidSec'}}</div>
+            {{#if this.paymentTypes}}
+            <div class="cc_payment_types_container">
+                <ul class="nav nav-tabs cc_nav-tabs cc_nav-tabs-payment" role="tablist">
+                    {{#each this.paymentTypes}}
+                    <li role="presentation" {{#ifEquals @index 0 }} class="active cc_nav-tabs_li" {{/ifEquals}}>
+                    <a href="#{{@key}}" aria-controls="{{@key}}" role="tab" class="cc_nav-tabs_anchor" data-toggle="tab">{{pageLabelMapMultiString 'PaymentProcessorTab_' @key}}</a>
+                    </li>
+                    {{/each}}
+                </ul>
+                <!--***********-->
+                <div class="tab-content cc_tab-content">
+                    {{#each this.paymentTypes}}
+                    <div role="tabpanel" class="cc_tab-pane tab-pane {{#ifEquals @index 0 }} active {{/ifEquals}} " id="{{@key}}">
+                        <div class="paymentTypeContainer {{@key}} err cc_payment_type">
+                            {{pageLabelMap 'Payment_LoadingPaymentType'}}
+                        </div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+            {{/if}}
+        </div>
+    </script>
+    <script>
+        jQuery(function($) {
+            CCRZ.pubSub.on('view:PaymentProcessorView:refresh',function(theView){
+                theView.useStoredPayment1 = function(event){
+                    //alert("inside Payment Processor View");
+                    console.log('MOdel => ');
+                    console.log(this.model);
+                    if(this.model.get("storedSelected")){
+                        var storedPayment = this.model.get("storedSelected");
+                        _.each(this.model.get('storedPayments'),function(sp){
+                            if(sp.sfid == storedPayment){
+                                storedPayment = sp;
+                            }
+                        });
+                        console.log(storedPayment);
+                        var remoteCall = _.extend(CCRZ.RemoteInvocation,{className:'XC_Payment_Controller'});
+                        remoteCall.invokeCtx('postPaypal', storedPayment.token, 'stored', CCRZ.cartCheckoutModel.attributes.totalAmount,
+                            function(resp){
+                                $("#id_error_message").html("");
+                                console.log('inside the handler for the remote call2');
+                                debugger;
+                                if(resp && resp.success){
+                                    //var formData2 = form2js(formName, '.', false, function(node) {}, false);
+                                    //remove credit card number and leave only last 4 digits
+                                    formData.accountNumber = formData.accountNumber.substring(formData.accountNumber.length - 4);
+
+                                    //formData.transactionCode = '12345678';
+                                    //console.log('johnson before nhk world  ------------  formData2 ' + JSON.stringify(formData2));
+                                    //CCRZ.pubSub.trigger('action:processPayment', formData);
+                                    console.log('Printing TX object ' + resp.data['txObject']);
+                                    CCRZ.pubSub.trigger('action:processPayment', resp.data['txObject']);
+
+                                    //CCRZ.pubSub.trigger('action:processPayment', formData2);
+                                    //$("#id_error_message").html("<span style='color:red; font-weight:bold; '>" + resp.data['theString'] + "</span>");
+                                    console.log("parsed error is " + resp.data['theString']);
+                                    console.log("Contact is" + resp.data['CONTACT']);
+                                    console.log("Cart is" + resp.data['CART']);
+                                }
+                                else{
+                                    console.log("things failed2");
+
+                                    $("#id_error_message").html("<span style='color:red; font-weight:bold;'>" + resp.data['CHARGENT RESULT'] + "</span>");
+                                    console.log("Cart is" + resp.data['CART']);
+                                    console.log("Contact is" + resp.data['CONTACT']);
+                                    console.log("Order is" + resp.data['ORDER']);
+
+                                    $('.deskLayout #overlay, .phoneLayout #overlay').remove();
+                                }
+
+
+                            },  {buffer:false,escape:false,nmsp:false}
+                        );
+                        debugger;
+                        CCRZ.pubSub.trigger("action:processPayment", {"storedPaymentId":storedPayment.sfid, "accountNumber":storedPayment.accountNumber, "accountType":storedPayment.accountType});
+                    }else{
+                        CCRZ.pubSub.trigger("pageMessage", CCRZ.createPageMessage('ERROR', "storedpayment-messagingSection-Error", 'PaymentProcessor_InvalidPaymentId'));
+                    }
+                }
+
+                theView.events['click .useStoredPayment1'] = 'useStoredPayment1';
+                theView.delegateEvents();
+            });
+        });
+    </script>
+</apex:page>
